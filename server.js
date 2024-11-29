@@ -13,6 +13,7 @@ app.use(bodyParser.json());
 function saveMessageToFile(workspaceID, channelID, message) {
   if (!workspaceID || !channelID) {
     console.error('Error: workspaceID or channelID is undefined.');
+    console.error(`workspaceID: ${workspaceID}, channelID: ${channelID}`);
     return;
   }
 
@@ -57,8 +58,10 @@ app.post('/slack/events', async (req, res) => {
     // Ignore bot messages and messages from the bot itself
     if (bot_id || !user) return res.sendStatus(200);
 
+    // Validate team_id and channel
     if (!team_id || !channel) {
       console.error('Error: Missing team_id or channel in the event.');
+      console.error(`Event Payload: ${JSON.stringify(event, null, 2)}`);
       return res.sendStatus(400); // Bad Request
     }
 
@@ -94,12 +97,14 @@ app.get('/api/messages', (req, res) => {
   console.log('Fetching messages for:', { workspaceID, channelID });
 
   if (!workspaceID || !channelID) {
+    console.error('Error: Missing workspaceID or channelID in request.');
     return res.status(400).send({ error: 'workspaceID and channelID are required' });
   }
 
   const filePath = path.join(__dirname, workspaceID, channelID, 'messages.txt');
 
   if (fs.existsSync(filePath)) {
+    console.log(`Sending file: ${filePath}`);
     return res.sendFile(filePath);
   } else {
     console.error('Messages file not found:', filePath);
