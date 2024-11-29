@@ -1,3 +1,15 @@
+const express = require('express');
+const bodyParser = require('body-parser');
+const fs = require('fs');
+const path = require('path');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Middleware
+app.use(bodyParser.json());
+
+// Save message to file function
 function saveMessageToFile(workspaceID, channelID, message) {
   if (!workspaceID || !channelID) {
     console.error('Error: workspaceID or channelID is undefined.');
@@ -27,6 +39,7 @@ function saveMessageToFile(workspaceID, channelID, message) {
   }
 }
 
+// Endpoint for Slack events
 app.post('/slack/events', async (req, res) => {
   const { type, challenge, event } = req.body;
 
@@ -42,7 +55,7 @@ app.post('/slack/events', async (req, res) => {
     console.log('Received Event:', { team_id, channel, user, text });
 
     // Ignore bot messages and messages from the bot itself
-    if (bot_id || user === botUserId) return res.sendStatus(200);
+    if (bot_id || !user) return res.sendStatus(200);
 
     if (!team_id || !channel) {
       console.error('Error: Missing team_id or channel in the event.');
@@ -74,6 +87,7 @@ app.post('/slack/events', async (req, res) => {
   res.sendStatus(200);
 });
 
+// Fetch messages for a workspace and channel
 app.get('/api/messages', (req, res) => {
   const { workspaceID, channelID } = req.query;
 
@@ -91,4 +105,15 @@ app.get('/api/messages', (req, res) => {
     console.error('Messages file not found:', filePath);
     return res.status(404).send({ error: 'Messages file not found for the specified workspace and channel' });
   }
+});
+
+// Send a message to Slack (mock function)
+async function sendMessageToSlack(channel, text) {
+  console.log(`Sending message to Slack channel ${channel}: ${text}`);
+  // Add your Slack API integration here
+}
+
+// Start server
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
