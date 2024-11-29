@@ -50,17 +50,17 @@ app.post('/slack/events', async (req, res) => {
   }
 
   if (type === 'event_callback' && event) {
-    const { type: eventType, text, user, channel, bot_id, team_id } = event;
+    const { type: eventType, text, user, channel, bot_id, team } = event;
 
     // Log received data for debugging
-    console.log('Received Event:', { team_id, channel, user, text });
+    console.log('Received Event:', { team, channel, user, text });
 
     // Ignore bot messages and messages from the bot itself
     if (bot_id || !user) return res.sendStatus(200);
 
-    // Validate team_id and channel
-    if (!team_id || !channel) {
-      console.error('Error: Missing team_id or channel in the event.');
+    // Validate team and channel
+    if (!team || !channel) {
+      console.error('Error: Missing team or channel in the event.');
       console.error(`Event Payload: ${JSON.stringify(event, null, 2)}`);
       return res.sendStatus(400); // Bad Request
     }
@@ -70,14 +70,14 @@ app.post('/slack/events', async (req, res) => {
         const receivedMessage = `User: ${user}, Message: "${text}"`;
 
         // Save received message
-        saveMessageToFile(team_id, channel, receivedMessage);
+        saveMessageToFile(team, channel, receivedMessage);
         console.log('Message saved:', receivedMessage);
 
         const botResponse = `Hello! You said: "${text}"`;
         await sendMessageToSlack(channel, botResponse);
 
         const responseLog = `Bot Response: ${botResponse}`;
-        saveMessageToFile(team_id, channel, responseLog);
+        saveMessageToFile(team, channel, responseLog);
         console.log('Response saved:', responseLog);
       }
     } catch (error) {
