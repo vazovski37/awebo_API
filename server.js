@@ -1,6 +1,7 @@
 const express = require('express');
 const axios = require('axios');
 const fs = require('fs');
+const path = require('path');
 const app = express();
 
 // Middleware to parse JSON
@@ -31,9 +32,25 @@ async function fetchBotUserId() {
 fetchBotUserId();
 
 // Helper function to save messages to a file
-function saveMessageToFile(message) {
+function saveMessageToFile(workspaceID, channelID, message) {
+  // Construct paths
+  const workspacePath = path.join(__dirname, workspaceID);
+  const channelPath = path.join(workspacePath, channelID);
+  const filePath = path.join(channelPath, 'messages.txt');
+
+  // Ensure directories exist
+  fs.mkdirSync(channelPath, { recursive: true });
+
+  // Prepend message to the file
   const logEntry = `[${new Date().toISOString()}] ${message}\n`;
-  fs.appendFileSync('slack_messages.txt', logEntry, 'utf8');
+  let existingContent = '';
+
+  if (fs.existsSync(filePath)) {
+    existingContent = fs.readFileSync(filePath, 'utf8');
+  }
+
+  const updatedContent = logEntry + existingContent;
+  fs.writeFileSync(filePath, updatedContent, 'utf8');
 }
 
 // Function to send a message to Slack
@@ -68,7 +85,7 @@ app.post('/slack/events', async (req, res) => {
 
   // Event callbacks
   if (type === 'event_callback' && event) {
-    const { type: eventType, text, user, channel, bot_id } = event;
+    const { type: eventType, text, user, channel, bot_id, team_id } = event;
 
     // Ignore bot messages and messages from the bot itself
     if (bot_id || user === botUserId) return res.sendStatus(200);
@@ -77,10 +94,10 @@ app.post('/slack/events', async (req, res) => {
       // Save messages from channels and DMs
       if (eventType === 'message' && text) {
         // Construct log entry
-        const receivedMessage = `Channel/DM: ${channel}, User: ${user}, Message: "${text}"`;
+        const receivedMessage = `User: ${user}, Message: "${text}"`;
 
-        // Save received message to file
-        saveMessageToFile(receivedMessage);
+        // Save received message to the appropriate file
+        saveMessageToFile(team_id, channel, receivedMessage);
         console.log('Message saved:', receivedMessage);
 
         // Bot's static response
@@ -89,9 +106,9 @@ app.post('/slack/events', async (req, res) => {
         // Send response to Slack
         await sendMessageToSlack(channel, botResponse);
 
-        // Log bot's response to file
-        const responseLog = `Bot Response: ${botResponse} (to Channel/DM: ${channel})`;
-        saveMessageToFile(responseLog);
+        // Log bot's response to the appropriate file
+        const responseLog = `Bot Response: ${botResponse}`;
+        saveMessageToFile(team_id, channel, responseLog);
         console.log('Response saved:', responseLog);
       }
     } catch (error) {
