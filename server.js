@@ -33,7 +33,6 @@ fetchBotUserId();
 
 // Helper function to save messages to a file
 function saveMessageToFile(workspaceID, channelID, message) {
-  // Construct paths
   const workspacePath = path.join(__dirname, workspaceID);
   const channelPath = path.join(workspacePath, channelID);
   const filePath = path.join(channelPath, 'messages.txt');
@@ -93,7 +92,6 @@ app.post('/slack/events', async (req, res) => {
     try {
       // Save messages from channels and DMs
       if (eventType === 'message' && text) {
-        // Construct log entry
         const receivedMessage = `User: ${user}, Message: "${text}"`;
 
         // Save received message to the appropriate file
@@ -118,6 +116,23 @@ app.post('/slack/events', async (req, res) => {
   }
 
   res.sendStatus(200);
+});
+
+// API to get messages.txt for a specific workspace and channel
+app.get('/api/messages', (req, res) => {
+  const { workspaceID, channelID } = req.query;
+
+  if (!workspaceID || !channelID) {
+    return res.status(400).send({ error: 'workspaceID and channelID are required' });
+  }
+
+  const filePath = path.join(__dirname, workspaceID, channelID, 'messages.txt');
+
+  if (fs.existsSync(filePath)) {
+    res.sendFile(filePath);
+  } else {
+    res.status(404).send({ error: 'Messages file not found for the specified workspace and channel' });
+  }
 });
 
 // Start the server
