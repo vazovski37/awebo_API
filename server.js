@@ -2,9 +2,13 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const fs = require('fs');
 const path = require('path');
+const axios = require('axios');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Replace with your Slack Bot User OAuth Token
+const SLACK_BOT_TOKEN = 'xoxb-8048268267043-8041803213414-pRJw9cujVpwHeUt8Le6PpDQH'; // Replace with your actual bot token
 
 // Middleware
 app.use(bodyParser.json());
@@ -74,11 +78,15 @@ app.post('/slack/events', async (req, res) => {
         console.log('Message saved:', receivedMessage);
 
         const botResponse = `Hello! You said: "${text}"`;
-        await sendMessageToSlack(channel, botResponse);
+        const slackResponse = await sendMessageToSlack(channel, botResponse);
 
-        const responseLog = `Bot Response: ${botResponse}`;
-        saveMessageToFile(team, channel, responseLog);
-        console.log('Response saved:', responseLog);
+        if (slackResponse.ok) {
+          const responseLog = `Bot Response: ${botResponse}`;
+          saveMessageToFile(team, channel, responseLog);
+          console.log('Response saved:', responseLog);
+        } else {
+          console.error('Failed to send message to Slack:', slackResponse.error);
+        }
       }
     } catch (error) {
       console.error('Error processing event:', error.message);
@@ -112,10 +120,28 @@ app.get('/api/messages', (req, res) => {
   }
 });
 
-// Send a message to Slack (mock function)
+// Send a message to Slack
 async function sendMessageToSlack(channel, text) {
-  console.log(`Sending message to Slack channel ${channel}: ${text}`);
-  // Add your Slack API integration here
+  try {
+    const response = await axios.post(
+      'https://slack.com/api/chat.postMessage',
+      {
+        channel: channel,
+        text: text,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${SLACK_BOT_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error('Error sending message to Slack:', error.message);
+    return { ok: false, error: error.message };
+  }
 }
 
 // Start server
