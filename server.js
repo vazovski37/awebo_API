@@ -9,9 +9,29 @@ const PORT = process.env.PORT || 3000;
 
 // Replace with your Slack Bot User OAuth Token
 const SLACK_BOT_TOKEN = 'xoxb-8048268267043-8041803213414-pRJw9cujVpwHeUt8Le6PpDQH'; // Replace with your actual bot token
+let botUserId = ''; // Bot User ID will be fetched dynamically
 
 // Middleware
 app.use(bodyParser.json());
+
+// Fetch bot's user ID on server start
+async function fetchBotUserId() {
+  try {
+    const response = await axios.get('https://slack.com/api/auth.test', {
+      headers: { Authorization: `Bearer ${SLACK_BOT_TOKEN}` },
+    });
+
+    if (response.data.ok) {
+      botUserId = response.data.user_id;
+      console.log('Bot user ID:', botUserId);
+    } else {
+      console.error('Failed to fetch bot user ID:', response.data.error);
+    }
+  } catch (error) {
+    console.error('Error fetching bot user ID:', error.message);
+  }
+}
+fetchBotUserId();
 
 // Save message to file function
 function saveMessageToFile(workspaceID, channelID, message) {
@@ -54,7 +74,7 @@ app.post('/slack/events', async (req, res) => {
   }
 
   if (type === 'event_callback' && event) {
-    const { type: eventType, text, user, channel, bot_id, team } = event;
+    const { type: eventType, text, user, channel, bot_id, team, channel_type } = event;
 
     // Log received data for debugging
     console.log('Received Event:', { team, channel, user, text });
@@ -77,15 +97,28 @@ app.post('/slack/events', async (req, res) => {
         saveMessageToFile(team, channel, receivedMessage);
         console.log('Message saved:', receivedMessage);
 
-        const botResponse = `Hello! You said: "${text}"`;
-        const slackResponse = await sendMessageToSlack(channel, botResponse);
+        // Bot logic
+        let shouldRespond = false;
 
-        if (slackResponse.ok) {
-          const responseLog = `Bot Response: ${botResponse}`;
-          saveMessageToFile(team, channel, responseLog);
-          console.log('Response saved:', responseLog);
-        } else {
-          console.error('Failed to send message to Slack:', slackResponse.error);
+        if (channel_type === 'channel' && text.includes(`<@${botUserId}>`)) {
+          // Respond only if mentioned in a channel
+          shouldRespond = true;
+        } else if (channel_type === 'im') {
+          // Respond to every message in DMs
+          shouldRespond = true;
+        }
+
+        if (shouldRespond) {
+          const botResponse = `Hello! You said: "${text}"`;
+          const slackResponse = await sendMessageToSlack(channel, botResponse);
+
+          if (slackResponse.ok) {
+            const responseLog = `Bot Response: ${botResponse}`;
+            saveMessageToFile(team, channel, responseLog);
+            console.log('Response saved:', responseLog);
+          } else {
+            console.error('Failed to send message to Slack:', slackResponse.error);
+          }
         }
       }
     } catch (error) {
