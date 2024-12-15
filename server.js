@@ -109,7 +109,7 @@ app.post('/slack/events', async (req, res) => {
         }
 
         if (shouldRespond) {
-          const botResponse = `Hello! You said: "${text}"`;
+          const botResponse = `Hello "${text}"`;
           const slackResponse = await sendMessageToSlack(channel, botResponse);
 
           if (slackResponse.ok) {
