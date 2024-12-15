@@ -12,6 +12,7 @@
   "dependencies": {
     "@slack/bolt": "^4.1.0",
     "axios": "^1.7.7",
+    "dotenv": "^16.4.7",
     "express": "^4.21.1",
     "graphql-request": "^7.1.2"
   }

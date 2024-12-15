@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const fs = require('fs');
@@ -6,10 +7,9 @@ const axios = require('axios');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const SLACK_BOT_TOKEN = process.env.SLACK_BOT_TOKEN;
 
-// Replace with your Slack Bot User OAuth Token
-const SLACK_BOT_TOKEN = 'xoxb-8048268267043-8041803213414-pRJw9cujVpwHeUt8Le6PpDQH'; // Replace with your actual bot token
-let botUserId = ''; // Bot User ID will be fetched dynamically
+let botUserId = '';
 
 // Middleware
 app.use(bodyParser.json());
