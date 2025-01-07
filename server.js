@@ -8,6 +8,7 @@ const axios = require('axios');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const SLACK_BOT_TOKEN = process.env.SLACK_BOT_TOKEN;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY; // Add your Gemini API key
 
 let botUserId = '';
 
@@ -64,6 +65,37 @@ function saveMessageToFile(workspaceID, channelID, message) {
   }
 }
 
+// Get response from Gemini AI
+async function getGeminiAIResponse(userMessage) {
+  try {
+    const response = await axios.post(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        contents: [
+          {
+            parts: [{ text: userMessage }],
+          },
+        ],
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (response.data && response.data.contents && response.data.contents[0].parts[0].text) {
+      return response.data.contents[0].parts[0].text.trim();
+    } else {
+      console.error('Invalid response from Gemini AI:', response.data);
+      return 'I’m sorry, I couldn’t generate a response at the moment.';
+    }
+  } catch (error) {
+    console.error('Error getting response from Gemini AI:', error.message);
+    return 'There was an error processing your request. Please try again later.';
+  }
+}
+
 // Endpoint for Slack events
 app.post('/slack/events', async (req, res) => {
   const { type, challenge, event } = req.body;
@@ -109,11 +141,12 @@ app.post('/slack/events', async (req, res) => {
         }
 
         if (shouldRespond) {
-          const botResponse = `Hello "${text}"`;
-          const slackResponse = await sendMessageToSlack(channel, botResponse);
+          // Fetch response from Gemini AI
+          const geminiResponse = await getGeminiAIResponse(text);
+          const slackResponse = await sendMessageToSlack(channel, geminiResponse);
 
           if (slackResponse.ok) {
-            const responseLog = `Bot Response: ${botResponse}`;
+            const responseLog = `Bot Response: ${geminiResponse}`;
             saveMessageToFile(team, channel, responseLog);
             console.log('Response saved:', responseLog);
           } else {
