@@ -68,15 +68,21 @@ function saveMessageToFile(workspaceID, channelID, message) {
 // Get response from Gemini AI
 async function getGeminiAIResponse(userMessage) {
   try {
+    const requestBody = {
+      contents: [
+        {
+          parts: [
+            { text: userMessage },
+          ],
+        },
+      ],
+    };
+
+    console.log('Sending request to Gemini API:', JSON.stringify(requestBody, null, 2));
+    console.log('gemma api key fetched ',GEMINI_API_KEY)
     const response = await axios.post(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        contents: [
-          {
-            parts: [{ text: userMessage }],
-          },
-        ],
-      },
+      requestBody,
       {
         headers: {
           'Content-Type': 'application/json',
@@ -84,17 +90,19 @@ async function getGeminiAIResponse(userMessage) {
       }
     );
 
+    // Validate response structure
     if (response.data && response.data.contents && response.data.contents[0].parts[0].text) {
       return response.data.contents[0].parts[0].text.trim();
     } else {
-      console.error('Invalid response from Gemini AI:', response.data);
+      console.error('Invalid response from Gemini API:', response.data);
       return 'I’m sorry, I couldn’t generate a response at the moment.';
     }
   } catch (error) {
-    console.error('Error getting response from Gemini AI:', error.message);
+    console.error('Error getting response from Gemini API:', error.response?.data || error.message);
     return 'There was an error processing your request. Please try again later.';
   }
 }
+
 
 // Endpoint for Slack events
 app.post('/slack/events', async (req, res) => {
