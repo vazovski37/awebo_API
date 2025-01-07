@@ -79,7 +79,7 @@ async function getGeminiAIResponse(userMessage) {
     };
 
     console.log('Sending request to Gemini API:', JSON.stringify(requestBody, null, 2));
-    console.log('gemma api key fetched ',GEMINI_API_KEY)
+
     const response = await axios.post(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
       requestBody,
@@ -90,9 +90,17 @@ async function getGeminiAIResponse(userMessage) {
       }
     );
 
-    // Validate response structure
-    if (response.data && response.data.contents && response.data.contents[0].parts[0].text) {
-      return response.data.contents[0].parts[0].text.trim();
+    // Validate and parse the response
+    if (
+      response.data &&
+      response.data.candidates &&
+      response.data.candidates.length > 0 &&
+      response.data.candidates[0].content &&
+      response.data.candidates[0].content.parts &&
+      response.data.candidates[0].content.parts.length > 0 &&
+      response.data.candidates[0].content.parts[0].text
+    ) {
+      return response.data.candidates[0].content.parts[0].text.trim();
     } else {
       console.error('Invalid response from Gemini API:', response.data);
       return 'I’m sorry, I couldn’t generate a response at the moment.';
@@ -102,6 +110,7 @@ async function getGeminiAIResponse(userMessage) {
     return 'There was an error processing your request. Please try again later.';
   }
 }
+
 
 
 // Endpoint for Slack events
